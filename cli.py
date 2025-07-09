@@ -1,4 +1,9 @@
-from core.repl import start_repl
+try:
+    from core.repl import start_repl
+    HAS_FULL_REPL = True
+except ImportError:
+    from core.simple_repl import start_simple_repl
+    HAS_FULL_REPL = False
 
 import click
 
@@ -20,7 +25,11 @@ def goodbye():
 @cli.command()
 def repl():
     """Start interactive REPL mode"""
-    start_repl()
+    if HAS_FULL_REPL:
+        start_repl()
+    else:
+        print("Using simplified REPL (install prompt_toolkit for full features)")
+        start_simple_repl()
 
 @cli.command()
 @click.argument('problem')
