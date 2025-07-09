@@ -154,5 +154,33 @@ def generate_auto(prompt, strategy, output, model, no_reasoning, no_autotest):
         console.print(f"[red]✗[/red] Error: {e}")
         task_manager.fail_task(task.id, str(e))
 
+@cli.command()
+def learning():
+    """Show AI learning system status and insights"""
+    from core.ai import AIEngine
+    from rich.console import Console
+    
+    console = Console()
+    ai_engine = AIEngine()
+    
+    console.print("[bold blue]🧠 CodeGen AI Learning System[/bold blue]\n")
+    
+    # Show learning status
+    status = ai_engine.get_learning_status()
+    if status["status"] == "disabled":
+        console.print("[yellow]Learning system not available[/yellow]")
+        return
+    
+    # Display insights
+    ai_engine.display_learning_insights()
+    
+    # Show some example patterns if available
+    if hasattr(ai_engine, 'learning_engine') and ai_engine.learning_engine:
+        patterns = ai_engine.learning_engine.db.get_fix_patterns(min_confidence=0.7)
+        if patterns:
+            console.print(f"\n[bold green]🎯 Top Learned Patterns:[/bold green]")
+            for i, pattern in enumerate(patterns[:3], 1):
+                console.print(f"{i}. {pattern.error_type} → {pattern.fix_strategy} ({pattern.confidence:.1%} confidence)")
+
 if __name__ == '__main__':
     cli()

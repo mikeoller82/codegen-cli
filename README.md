@@ -323,3 +323,120 @@ The enhanced workflow creates a continuous development experience:
 6. **Repeat**: Seamless continuation of development work
 
 This creates an efficient, automated development assistant that handles the tedious parts of coding while keeping you focused on the creative aspects.
+
+## 🧠 AI Learning System
+
+CodeGen CLI now includes an advanced AI learning system that learns from successful fixes and continuously improves code generation quality:
+
+### Learning Features
+
+- **Pattern Recognition**: Automatically identifies and learns from successful fix patterns
+- **Prompt Improvement**: Enhances prompts based on learned patterns and common issues
+- **Code Templates**: Builds reusable code templates from successful generations
+- **Confidence Tracking**: Tracks success rates and confidence levels for learned patterns
+- **Persistent Learning**: Stores learned patterns in a database for future sessions
+
+### How Learning Works
+
+1. **Fix Pattern Learning**: When code is successfully fixed, the system analyzes:
+   - What type of error occurred
+   - Which fix strategy worked
+   - The pattern of the fix applied
+   - Success/failure rates over time
+
+2. **Generation Improvement**: The system learns from entire generation sessions:
+   - Common issues for different types of prompts
+   - Effective approaches for specific problem categories
+   - Code templates that work well
+
+3. **Continuous Improvement**: Each session makes the AI better:
+   - Prompts are automatically enhanced with learned insights
+   - Code templates provide better starting points
+   - Fix strategies are prioritized by success rate
+
+### Learning Commands
+
+#### CLI Commands
+\`\`\`bash
+# Show learning system status and insights
+python cli.py learning
+
+# Generate code with learning (default behavior)
+python cli.py generate-auto "create a web scraper"
+\`\`\`
+
+#### REPL Commands
+\`\`\`bash
+# In REPL mode:
+learning                    # Show learning system status
+patterns                    # Show learned fix patterns  
+insights                    # Show detailed learning insights and recommendations
+learning clear              # Clear all learned patterns (with confirmation)
+learning export data.json   # Export learning data to file
+\`\`\`
+
+### Learning Insights Example
+
+\`\`\`bash
+codegen:~ [gpt-3.5-turbo] $ learning
+
+🧠 AI Learning Status
+┌─────────────────────┬─────────────┐
+│ Metric              │ Value       │
+├─────────────────────┼─────────────┤
+│ Status              │ 🟢 Active   │
+│ Total Patterns      │ 23          │
+│ Active Patterns     │ 18          │
+│ Average Confidence  │ 78.5%       │
+│ Learning Rate       │ 2.3/hour    │
+│ Recent Improvements │ 5           │
+└─────────────────────┴─────────────┘
+
+📊 Patterns by Error Type:
+┌─────────────────┬──────────┬────────────┐
+│ Error Type      │ Patterns │ Percentage │
+├─────────────────┼──────────┼────────────┤
+│ import_error    │ 8        │ 34.8%      │
+│ syntax_error    │ 6        │ 26.1%      │
+│ runtime_error   │ 5        │ 21.7%      │
+│ logic_error     │ 4        │ 17.4%      │
+└─────────────────┴──────────┴────────────┘
+
+🎯 Top Learned Patterns:
+┌─────────────────┬─────────────────────┬─────────────────┬──────┐
+│ Error Type      │ Fix Strategy        │ Confidence      │ Uses │
+├─────────────────┼─────────────────────┼─────────────────┼──────┤
+│ import_error    │ Fix Import Errors   │ ██████████ 95%  │ 12   │
+│ syntax_error    │ Fix Syntax Errors   │ █████████░ 89%  │ 8    │
+│ runtime_error   │ Fix Runtime Errors  │ ████████░░ 82%  │ 6    │
+└─────────────────┴─────────────────────┴─────────────────┴──────┘
+
+💡 Recommendations:
+• Continue using the system to improve pattern confidence
+• The AI learns from every successful fix and improves over time!
+\`\`\`
+
+### Learning Demo
+
+Run the learning demo to see the system in action:
+
+\`\`\`bash
+python examples/learning_demo.py
+\`\`\`
+
+This demo will:
+- Show the initial learning state
+- Run several coding tasks that trigger learning
+- Display how patterns are learned from successful fixes
+- Show the improved learning state after the session
+- Demonstrate prompt improvements based on learned patterns
+
+### Learning Benefits
+
+- **Faster Generation**: Learned templates provide better starting points
+- **Fewer Errors**: Common mistakes are avoided based on learned patterns
+- **Better Prompts**: Automatic prompt enhancement based on successful patterns
+- **Continuous Improvement**: The system gets better with every use
+- **Personalized**: Learns from your specific coding patterns and preferences
+
+The learning system makes CodeGen CLI progressively more intelligent and helpful over time, adapting to your coding style and common problem patterns.
