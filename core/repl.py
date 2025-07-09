@@ -7,6 +7,7 @@ import sys
 import os
 from typing import Dict, List, Optional, Any
 from pathlib import Path
+from datetime import datetime
 
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter, PathCompleter, Completer, Completion
@@ -21,6 +22,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from rich.markdown import Markdown
+from rich.prompt import Confirm, Prompt
 
 from .ai import AIEngine
 from .fs import FileSystemManager
@@ -28,6 +30,8 @@ from .web import WebManager
 from .sandbox import CodeSandbox
 from .memory import MemoryManager
 from .reasoning import ReasoningEngine, ThinkingStep
+from .task_manager import TaskManager, TaskStatus
+from .auto_fix import AutoFixEngine
 
 console = Console()
 logger = logging.getLogger("codegen.repl")
@@ -41,7 +45,8 @@ class CodeGenCompleter(Completer):
             'fetch', 'web', 'memory', 'mem', 'clear', 'cls', 'help', 'exit', 'quit',
             'ls', 'dir', 'cd', 'pwd', 'cat', 'save', 'load', 'history', 'models',
             'context', 'vars', 'env', 'config', 'debug', 'verbose',
-            'think', 'reason', 'analyze', 'strategies', 'reasoning'  # New reasoning commands
+            'think', 'reason', 'analyze', 'strategies', 'reasoning',
+            'generate-auto', 'gen-auto', 'tasks', 'autotest', 'next'  # New commands
         ]
         self.path_completer = PathCompleter()
         self.word_completer = WordCompleter(self.commands, ignore_case=True)
@@ -68,6 +73,8 @@ class REPLSession:
         self.web_manager = WebManager()
         self.sandbox = CodeSandbox()
         self.memory = MemoryManager()
+        self.task_manager = TaskManager()
+        self.auto_test_mode = True  # Enable auto-testing by default
         
         self.history = InMemoryHistory()
         self.completer = CodeGenCompleter()
@@ -91,7 +98,8 @@ class REPLSession:
             'exec': 'run',
             'web': 'fetch',
             'q': 'quit',
-            'exit': 'quit'
+            'exit': 'quit',
+            'gen-auto': 'generate-auto'
         }
         
         self.running = True
@@ -238,6 +246,14 @@ class REPLSession:
                 self.cmd_strategies(args)
             elif command == 'reasoning':
                 self.cmd_reasoning_history(args)
+            elif command == 'generate-auto' or command == 'gen-auto':
+                self.cmd_generate_with_autofix(args)
+            elif command == 'tasks':
+                self.cmd_tasks(args)
+            elif command == 'autotest':
+                self.cmd_autotest(args)
+            elif command == 'next':
+                self.cmd_next(args)
             else:
                 console.print(f"[red]Unknown command: {command}[/red]")
                 console.print("Type 'help' for available commands")
@@ -286,7 +302,11 @@ class REPLSession:
                 ("reason <strategy> <problem>", "Reason through a problem with a strategy", "reason first_principles 'what is the best way to learn a new language'"),
                 ("analyze <problem|file>", "Analyze a problem or code file", "analyze 'how to improve this code'"),
                 ("strategies", "Show available reasoning strategies", "strategies"),
-                ("reasoning", "Show reasoning history", "reasoning")
+                ("reasoning", "Show reasoning history", "reasoning"),
+                ("generate-auto <prompt>", "Generate code with auto-testing", "generate-auto 'create a calculator'"),
+                ("tasks [all|stats|id]", "Show tasks and statistics", "tasks stats"),
+                ("autotest [on|off]", "Toggle auto-testing", "autotest on"),
+                ("next", "Ask for next task", "next"),
             ]
             
             for cmd, desc, example in commands:
@@ -811,19 +831,19 @@ class REPLSession:
         history_table.add_column("Steps", style="yellow")
         history_table.add_column("Confidence", style="green")
     
-    for chain in history[-10:]:  # Show last 10
-        problem_preview = chain.problem[:50] + "..." if len(chain.problem) > 50 else chain.problem
-        confidence_bar = "█" * int(chain.confidence * 5) + "░" * (5 - int(chain.confidence * 5))
+        for chain in history[-10:]:  # Show last 10
+            problem_preview = chain.problem[:50] + "..." if len(chain.problem) > 50 else chain.problem
+            confidence_bar = "█" * int(chain.confidence * 5) + "░" * (5 - int(chain.confidence * 5))
         
-        history_table.add_row(
-            f"{chain.reasoning_time:.1f}s",
-            problem_preview,
-            chain.metadata.get('strategy', 'unknown'),
-            str(len(chain.steps)),
-            f"{confidence_bar} {chain.confidence:.1%}"
-        )
+            history_table.add_row(
+                f"{chain.reasoning_time:.1f}s",
+                problem_preview,
+                chain.metadata.get('strategy', 'unknown'),
+                str(len(chain.steps)),
+                f"{confidence_bar} {chain.confidence:.1%}"
+            )
     
-    console.print(history_table)
+        console.print(history_table)
     
     def get_command_help(self, command: str) -> str:
         """Get detailed help for a specific command"""
@@ -921,6 +941,144 @@ Use 'reasoning clear' to clear the history.
         }
         
         return help_texts.get(command, f"No detailed help available for '{command}'")
+
+    def cmd_generate_with_autofix(self, args: List[str]):
+        """Generate code with automatic testing and fixing"""
+        if not args:
+            console.print("[red]Usage: generate <prompt> [--no-reasoning] [--no-autotest][/red]")
+            return
+        
+        # Parse arguments
+        use_reasoning = '--no-reasoning' not in args
+        use_autotest = '--no-autotest' not in args and self.auto_test_mode
+        
+        # Remove flags from args
+        args = [arg for arg in args if not arg.startswith('--')]
+        prompt_text = ' '.join(args)
+        
+        # Create a new task
+        task = self.task_manager.add_task(prompt_text)
+        task.status = TaskStatus.IN_PROGRESS
+        
+        console.print(f"\n[bold blue]🚀 Starting Task #{task.id}[/bold blue]")
+        console.print(f"[dim]{prompt_text}[/dim]")
+        
+        try:
+            if use_autotest:
+                # Generate with auto-fix
+                result, reasoning_chain, fix_attempts, final_test = self.ai_engine.generate_code_with_auto_fix(
+                    prompt_text, 
+                    self.config['default_model'],
+                    use_reasoning=use_reasoning,
+                    show_progress=True
+                )
+                
+                # Update task with results
+                task.code_generated = result
+                task.fix_attempts = fix_attempts
+                task.test_result = final_test
+                
+                if final_test.result.value == 'pass':
+                    task.status = TaskStatus.COMPLETED
+                    task.completed_at = datetime.now()
+                    console.print(f"\n[bold green]✅ Task #{task.id} completed successfully![/bold green]")
+                else:
+                    task.status = TaskStatus.NEEDS_REVISION
+                    console.print(f"\n[bold yellow]⚠️  Task #{task.id} needs revision[/bold yellow]")
+                
+            else:
+                # Generate without auto-fix
+                if use_reasoning:
+                    result, reasoning_chain = self.ai_engine.generate_code_with_reasoning(
+                        prompt_text, self.config['default_model'], show_thinking=True
+                    )
+                else:
+                    result = self.ai_engine.generate_code(prompt_text, self.config['default_model'])
+                    reasoning_chain = None
+                
+                task.code_generated = result
+                task.status = TaskStatus.COMPLETED
+                task.completed_at = datetime.now()
+            
+            # Display the final code
+            console.print("\n[bold blue]📄 Final Code:[/bold blue]")
+            self.fs_manager.display_code(result)
+            
+            # Store in memory and variables
+            self.memory.add_generation(prompt_text, result)
+            self.variables['last_generated'] = result
+            self.variables['current_task'] = task
+            
+            # Ask if user wants to save
+            if Confirm.ask("Save generated code to file?"):
+                filename = Prompt.ask("Enter filename")
+                if filename:
+                    self.fs_manager.write_file(filename, result)
+                    console.print(f"[green]✓[/green] Saved to {filename}")
+                    task.notes += f" Saved to {filename}."
+            
+            # Provide recap and ask for next task
+            self.task_manager.recap_last_task(task)
+            
+            # Ask for next task
+            next_task_desc = self.task_manager.ask_for_next_task()
+            if next_task_desc:
+                # Automatically start the next task
+                self.cmd_generate_with_autofix(next_task_desc.split())
+            else:
+                console.print("\n[dim]Session ended. Type 'help' for commands or 'quit' to exit.[/dim]")
+                
+        except Exception as e:
+            task.status = TaskStatus.FAILED
+            task.notes = str(e)
+            console.print(f"[red]❌ Task #{task.id} failed: {e}[/red]")
+
+    def cmd_tasks(self, args: List[str]):
+        """Show and manage tasks"""
+        if not args:
+            self.task_manager.display_tasks()
+        elif args[0] == 'all':
+            self.task_manager.display_tasks(show_all=True)
+        elif args[0] == 'stats':
+            stats = self.task_manager.get_session_stats()
+            
+            stats_table = Table(title="Session Statistics")
+            stats_table.add_column("Metric", style="cyan")
+            stats_table.add_column("Value", style="white")
+            
+            stats_table.add_row("Total Tasks", str(stats['total_tasks']))
+            stats_table.add_row("Completed", str(stats['completed_tasks']))
+            stats_table.add_row("Failed", str(stats['failed_tasks']))
+            stats_table.add_row("Pending", str(stats['pending_tasks']))
+            stats_table.add_row("Success Rate", f"{stats['success_rate']:.1f}%")
+            stats_table.add_row("Session Duration", str(stats['session_duration']).split('.')[0])
+            
+            console.print(stats_table)
+        elif args[0].isdigit():
+            task_id = int(args[0])
+            self.task_manager.display_task_details(task_id)
+        else:
+            console.print("[red]Usage: tasks [all|stats|<task_id>][/red]")
+
+    def cmd_autotest(self, args: List[str]):
+        """Toggle or configure auto-testing"""
+        if not args:
+            status = "enabled" if self.auto_test_mode else "disabled"
+            console.print(f"Auto-testing is currently [bold]{status}[/bold]")
+        elif args[0] in ['on', 'enable', 'true']:
+            self.auto_test_mode = True
+            console.print("[green]✓[/green] Auto-testing enabled")
+        elif args[0] in ['off', 'disable', 'false']:
+            self.auto_test_mode = False
+            console.print("[yellow]⚠️[/yellow] Auto-testing disabled")
+        else:
+            console.print("[red]Usage: autotest [on|off][/red]")
+
+    def cmd_next(self, args: List[str]):
+        """Ask for next task"""
+        next_task_desc = self.task_manager.ask_for_next_task()
+        if next_task_desc:
+            self.cmd_generate_with_autofix(next_task_desc.split())
 
 def start_repl():
     """Start the REPL session"""

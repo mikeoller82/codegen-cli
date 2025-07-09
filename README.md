@@ -201,3 +201,125 @@ When using reasoning with code generation, the AI:
 5. **Generates** code based on the reasoning
 
 This results in higher quality, more thoughtful code that addresses edge cases and follows best practices.
+
+## 🔧 Automatic Testing and Fixing
+
+CodeGen CLI now includes powerful auto-fix capabilities that automatically test generated code and fix common issues:
+
+### Auto-Fix Features
+
+- **Automatic Testing**: Every generated code is automatically tested for syntax and runtime errors
+- **Intelligent Fixing**: Multiple fix strategies are applied to resolve issues
+- **Progress Tracking**: Visual progress indicators show testing and fixing steps
+- **Fix Summaries**: Detailed reports of what was fixed and how
+
+### Fix Strategies
+
+The auto-fix engine uses multiple strategies in order:
+
+1. **Syntax Error Fixes**: Correct indentation, missing colons, brackets
+2. **Import Error Fixes**: Replace unavailable modules with alternatives
+3. **Runtime Error Fixes**: Add missing variable definitions
+4. **Error Handling**: Wrap code in try-catch blocks
+5. **Structure Fixes**: Add proper function/class structure
+
+### CLI Auto-Fix Commands
+
+\`\`\`bash
+# Generate code with automatic testing and fixing
+python cli.py generate-auto "create a web scraper"
+
+# Skip reasoning for faster generation
+python cli.py generate-auto "create calculator" --no-reasoning
+
+# Skip auto-testing
+python cli.py generate-auto "create function" --no-autotest
+
+# Save directly to file
+python cli.py generate-auto "create API" -o api.py
+\`\`\`
+
+### REPL Auto-Fix Commands
+
+\`\`\`bash
+# In REPL mode:
+generate-auto "create a Flask server"    # Generate with auto-testing
+gen-auto "implement sorting algorithm"   # Short alias
+tasks                                    # Show current tasks
+tasks stats                             # Show session statistics
+tasks 1                                 # Show details for task #1
+autotest on/off                         # Toggle auto-testing
+next                                    # Ask for next task
+\`\`\`
+
+## 📋 Task Management
+
+CodeGen CLI includes a built-in task management system for continuous development:
+
+### Task Features
+
+- **Automatic Task Creation**: Each generation request becomes a tracked task
+- **Status Tracking**: Tasks are marked as pending, in-progress, completed, or failed
+- **Fix History**: All fix attempts are recorded for each task
+- **Session Statistics**: Track success rates and productivity metrics
+- **Continuous Workflow**: Automatic prompting for next tasks
+
+### Task Workflow Example
+
+\`\`\`bash
+codegen:~ [gpt-3.5-turbo] $ generate-auto "create a calculator class"
+
+🚀 Starting Task #1
+create a calculator class
+
+🤔 Reasoning through: create a calculator class
+🧪 Testing Generated Code
+🔧 Fix Attempt 1/3: Attempting fix...
+✅ Fix successful with strategy: _fix_syntax_errors
+✅ Code fixed successfully after 1 attempts!
+
+📋 Fix Summary:
+✅ Successfully fixed code after 1 attempts
+  ✅ Attempt 1: _fix_syntax_errors
+     → Fixed syntax_error
+
+📋 Task Recap: #1
+Task:     create a calculator class
+Status:   completed
+Duration: 0:00:15
+Fixes Applied: 1
+
+🎯 Ready for next task!
+Session stats: 1 completed, 0 pending, 100.0% success rate
+
+What would you like me to work on next?
+Examples:
+  • Create a web scraper for news articles
+  • Add authentication to the existing API
+  • Optimize the database queries
+  • Write unit tests for the calculator
+
+Next task: add unit tests for the calculator
+\`\`\`
+
+### Session Statistics
+
+Track your development productivity:
+
+- **Total Tasks**: Number of tasks attempted
+- **Success Rate**: Percentage of successfully completed tasks
+- **Fix Attempts**: Average number of fixes needed per task
+- **Session Duration**: Total time spent in development session
+
+### Continuous Development Loop
+
+The enhanced workflow creates a continuous development experience:
+
+1. **Generate**: AI creates code based on your request
+2. **Test**: Code is automatically tested for issues
+3. **Fix**: Any problems are automatically resolved
+4. **Recap**: Summary of what was accomplished
+5. **Next**: Prompt for the next development task
+6. **Repeat**: Seamless continuation of development work
+
+This creates an efficient, automated development assistant that handles the tedious parts of coding while keeping you focused on the creative aspects.

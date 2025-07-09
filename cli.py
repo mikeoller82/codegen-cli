@@ -86,5 +86,73 @@ def generate_with_reasoning(prompt, strategy, output, model):
         except Exception as e:
             console.print(f"[red]✗[/red] Error generating with reasoning: {e}")
 
+@cli.command()
+@click.argument('prompt')
+@click.option('--strategy', default='step_by_step', help='Reasoning strategy')
+@click.option('--output', '-o', help='Output file to save generated code')
+@click.option('--model', default='gpt-3.5-turbo', help='AI model to use')
+@click.option('--no-reasoning', is_flag=True, help='Skip reasoning process')
+@click.option('--no-autotest', is_flag=True, help='Skip automatic testing')
+def generate_auto(prompt, strategy, output, model, no_reasoning, no_autotest):
+    """Generate code with automatic testing and fixing"""
+    from core.ai import AIEngine
+    from core.task_manager import TaskManager
+    from rich.console import Console
+    
+    console = Console()
+    ai_engine = AIEngine()
+    task_manager = TaskManager()
+    
+    # Create task
+    task = task_manager.add_task(prompt)
+    
+    console.print(f"\n[bold blue]🚀 Starting Task: {prompt}[/bold blue]")
+    
+    try:
+        if not no_autotest:
+            # Generate with auto-fix
+            result, reasoning_chain, fix_attempts, final_test = ai_engine.generate_code_with_auto_fix(
+                prompt, model, 
+                use_reasoning=not no_reasoning,
+                reasoning_strategy=strategy,
+                show_progress=True
+            )
+            
+            # Show results
+            if final_test.result.value == 'pass':
+                console.print(f"\n[bold green]✅ Task completed successfully![/bold green]")
+                task_manager.complete_task(task.id, result)
+            else:
+                console.print(f"\n[bold yellow]⚠️  Task completed with issues[/bold yellow]")
+                task_manager.fail_task(task.id, f"Final test: {final_test.result.value}")
+        else:
+            # Generate without auto-fix
+            if not no_reasoning:
+                result, reasoning_chain = ai_engine.generate_code_with_reasoning(
+                    prompt, model, strategy, show_thinking=True
+                )
+            else:
+                result = ai_engine.generate_code(prompt, model)
+            
+            task_manager.complete_task(task.id, result)
+        
+        # Save if requested
+        if output:
+            with open(output, 'w') as f:
+                f.write(result)
+            console.print(f"[green]✓[/green] Code saved to {output}")
+        else:
+            console.print("\n[bold blue]Generated Code:[/bold blue]")
+            from core.fs import FileSystemManager
+            fs_manager = FileSystemManager()
+            fs_manager.display_code(result)
+        
+        # Show task recap
+        task_manager.recap_last_task(task)
+        
+    except Exception as e:
+        console.print(f"[red]✗[/red] Error: {e}")
+        task_manager.fail_task(task.id, str(e))
+
 if __name__ == '__main__':
     cli()
