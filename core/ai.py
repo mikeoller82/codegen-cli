@@ -11,11 +11,13 @@ logger = logging.getLogger(__name__)
 
 # Import the reasoning engine
 from .reasoning import ReasoningEngine, ReasoningChain
+
 # Add this import at the top
 from .auto_fix import AutoFixEngine
 from .learning_engine import LearningEngine
 
 from rich.console import Console
+
 console = Console()
 
 
@@ -42,7 +44,7 @@ class AIEngine:
         if gemini_api_key:
             try:
                 genai.configure(api_key=gemini_api_key)
-                self.gemini_model = genai.GenerativeModel("gemini-1.5-pro-latest")
+                self.gemini_model = genai.GenerativeModel("gemini-2.5-pro")
                 logger.info("Gemini model initialized successfully.")
             except Exception as e:
                 logger.error(f"Failed to initialize Gemini model: {e}")
@@ -68,7 +70,7 @@ Now generate clean, well-documented code to solve the following problem:
 
         # Initialize learning engine first
         self.learning_engine = LearningEngine(self)
-        
+
         # Initialize reasoning engine
         self.reasoning_engine = ReasoningEngine(self)
         self.use_reasoning = True  # Flag to enable/disable reasoning
@@ -111,34 +113,42 @@ Now generate clean, well-documented code to solve the following problem:
             logger.error(f"Error generating code with Gemini: {e}")
             return f"Failed to generate code: {e}"
 
-    def generate_code(self, prompt: str, model: str = None, use_reasoning: bool = None) -> str:
+    def generate_code(
+        self, prompt: str, model: str = None, use_reasoning: bool = None
+    ) -> str:
         """Generate code using the specified AI model with learning improvements"""
         if use_reasoning is None:
             use_reasoning = self.use_reasoning
-        
+
         # Apply learned improvements to the prompt
         improved_prompt, improvement_note = self.learning_engine.improve_prompt(prompt)
         if improvement_note:
-            console.print(f"[dim]💡 Applied learned improvement: {improvement_note}[/dim]")
-        
+            console.print(
+                f"[dim]💡 Applied learned improvement: {improvement_note}[/dim]"
+            )
+
         if use_reasoning:
-            code, _ = self.generate_code_with_reasoning(improved_prompt, model, show_thinking=False)
+            code, _ = self.generate_code_with_reasoning(
+                improved_prompt, model, show_thinking=False
+            )
             return code
         else:
             model = model or self.default_model
-            
+
             # Check for learned code templates
             template = self.learning_engine.get_code_template(improved_prompt)
             if template:
-                console.print("[dim]📋 Using learned code template as starting point[/dim]")
+                console.print(
+                    "[dim]📋 Using learned code template as starting point[/dim]"
+                )
                 enhanced_prompt = f"{improved_prompt}\n\nUse this template as a starting point:\n{template}"
             else:
                 enhanced_prompt = self.prompt_template.format(prompt=improved_prompt)
 
             try:
-                if model.startswith('gpt') and self.openai_client:
+                if model.startswith("gpt") and self.openai_client:
                     return self._generate_with_openai(enhanced_prompt, model)
-                elif model.startswith('gemini') and self.gemini_model:
+                elif model.startswith("gemini") and self.gemini_model:
                     return self._generate_with_gemini(enhanced_prompt)
                 else:
                     return "Model not supported."
@@ -146,48 +156,67 @@ Now generate clean, well-documented code to solve the following problem:
                 logger.error(f"Code generation failed: {e}")
                 return "Failed to generate code."
 
-    def generate_code_with_examples(self, prompt: str, examples: str, model: str = None) -> str:
+    def generate_code_with_examples(
+        self, prompt: str, examples: str, model: str = None
+    ) -> str:
         """Generate code using the specified AI model with few shot examples"""
         model = model or self.default_model
-        
+
         # Apply learned improvements
         improved_prompt, improvement_note = self.learning_engine.improve_prompt(prompt)
         if improvement_note:
-            console.print(f"[dim]💡 Applied learned improvement: {improvement_note}[/dim]")
-        
-        enhanced_prompt = self.prompt_template_few_shot.format(prompt=improved_prompt, examples=examples)
+            console.print(
+                f"[dim]💡 Applied learned improvement: {improvement_note}[/dim]"
+            )
+
+        enhanced_prompt = self.prompt_template_few_shot.format(
+            prompt=improved_prompt, examples=examples
+        )
 
         try:
-            if model.startswith('gpt') and self.openai_client:
+            if model.startswith("gpt") and self.openai_client:
                 return self._generate_with_openai(enhanced_prompt, model)
-            elif model.startswith('gemini') and self.gemini_model:
+            elif model.startswith("gemini") and self.gemini_model:
                 return self._generate_with_gemini(enhanced_prompt)
             else:
+                # Mock response for demo purposes
+                if "mock" in model:
+                    return self._generate_mock_response(enhanced_prompt)
                 return "Model not supported."
         except Exception as e:
             logger.error(f"Code generation failed: {e}")
             return "Failed to generate code."
 
-    def generate_code_with_reasoning(self, prompt: str, model: str = None, 
-                                   reasoning_strategy: str = 'step_by_step',
-                                   show_thinking: bool = True) -> Tuple[str, ReasoningChain]:
+    def generate_code_with_reasoning(
+        self,
+        prompt: str,
+        model: str = None,
+        reasoning_strategy: str = "step_by_step",
+        show_thinking: bool = True,
+    ) -> Tuple[str, ReasoningChain]:
         """Generate code with explicit reasoning process and learning"""
         model = model or self.default_model
-        
+
         # Apply learned improvements to the prompt
         improved_prompt, improvement_note = self.learning_engine.improve_prompt(prompt)
         if improvement_note and show_thinking:
-            console.print(f"[dim]💡 Applied learned improvement: {improvement_note}[/dim]")
-        
+            console.print(
+                f"[dim]💡 Applied learned improvement: {improvement_note}[/dim]"
+            )
+
         # First, reason through the problem
         reasoning_chain = self.reasoning_engine.reason_through_problem(
             improved_prompt, reasoning_strategy, show_thinking
         )
-        
+
         # Check for learned code templates
         template = self.learning_engine.get_code_template(improved_prompt)
-        template_context = f"\n\nUse this learned template as guidance:\n{template}" if template else ""
-        
+        template_context = (
+            f"\n\nUse this learned template as guidance:\n{template}"
+            if template
+            else ""
+        )
+
         # Use the reasoning to enhance the prompt
         enhanced_prompt = f"""
 Based on this systematic reasoning process:
@@ -203,32 +232,38 @@ Final Solution Strategy:
 
 Now generate clean, well-documented code that implements this solution:
 """
-        
+
         # Generate the actual code
         try:
-            if model.startswith('gpt') and self.openai_client:
+            if model.startswith("gpt") and self.openai_client:
                 code = self._generate_with_openai(enhanced_prompt, model)
-            elif model.startswith('gemini') and self.gemini_model:
+            elif model.startswith("gemini") and self.gemini_model:
                 code = self._generate_with_gemini(enhanced_prompt)
             else:
                 code = reasoning_chain.final_solution
-            
+
             return code, reasoning_chain
-            
+
         except Exception as e:
             logger.error(f"Code generation with reasoning failed: {e}")
             return reasoning_chain.final_solution, reasoning_chain
 
-    def generate_code_with_auto_fix(self, prompt: str, model: str = None, 
-                                  use_reasoning: bool = True,
-                                  reasoning_strategy: str = 'step_by_step',
-                                  show_progress: bool = True) -> Tuple[str, Any, List, Any]:
+    def generate_code_with_auto_fix(
+        self,
+        prompt: str,
+        model: str = None,
+        use_reasoning: bool = True,
+        reasoning_strategy: str = "step_by_step",
+        show_progress: bool = True,
+    ) -> Tuple[str, Any, List, Any]:
         """Generate code with automatic testing, fixing, and learning"""
-        
+
         if show_progress:
-            console.print(f"\n[bold blue]🚀 Enhanced AI Generation with Learning[/bold blue]")
+            console.print(
+                f"\n[bold blue]🚀 Enhanced AI Generation with Learning[/bold blue]"
+            )
             console.print(f"[dim]Prompt: {prompt}[/dim]")
-        
+
         # First generate the code (with or without reasoning)
         if use_reasoning:
             initial_code, reasoning_chain = self.generate_code_with_reasoning(
@@ -237,50 +272,56 @@ Now generate clean, well-documented code that implements this solution:
         else:
             initial_code = self.generate_code(prompt, model, use_reasoning=False)
             reasoning_chain = None
-        
+
         # Test and fix the code with learning
         final_code, fix_attempts, final_test = self.auto_fix_engine.test_and_fix_code(
             initial_code, prompt, show_progress=show_progress
         )
-        
+
         # Generate summary with learning insights
         fix_summary = self.auto_fix_engine.generate_fix_summary(
             initial_code, final_code, fix_attempts, final_test
         )
-        
+
         if show_progress:
             console.print(f"\n[bold blue]📋 Enhanced Fix Summary:[/bold blue]")
             console.print(fix_summary)
-            
+
             # Show learning metrics if available
-            if hasattr(self.learning_engine, 'get_learning_metrics'):
+            if hasattr(self.learning_engine, "get_learning_metrics"):
                 metrics = self.learning_engine.get_learning_metrics()
                 if metrics.total_patterns > 0:
-                    console.print(f"\n[dim]🧠 Learning Status: {metrics.total_patterns} patterns learned, "
-                                f"{metrics.avg_confidence:.1%} avg confidence[/dim]")
-        
+                    console.print(
+                        f"\n[dim]🧠 Learning Status: {metrics.total_patterns} patterns learned, "
+                        f"{metrics.avg_confidence:.1%} avg confidence[/dim]"
+                    )
+
         return final_code, reasoning_chain, fix_attempts, final_test
 
     def get_available_models(self) -> List[str]:
         """Get list of available AI models"""
         models = []
-        
+
         if self.openai_client:
-            models.extend(['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'])
-        
+            models.extend(["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"])
+
         if self.gemini_model:
-            models.extend(['gemini-1.5-pro-latest'])
-        
+            models.extend(["gemini-1.5-pro-latest"])
+
         if not models:
-            models = ['mock']  # Fallback for testing
-        
+            models = ["mock"]  # Fallback for testing
+
+        # Always include mock for demo purposes
+        if "mock" not in models:
+            models.append("mock")
+
         return models
 
     def get_learning_status(self) -> dict:
         """Get current learning system status"""
         if not self.learning_engine:
             return {"status": "disabled"}
-        
+
         metrics = self.learning_engine.get_learning_metrics()
         return {
             "status": "active",
@@ -288,7 +329,7 @@ Now generate clean, well-documented code that implements this solution:
             "active_patterns": metrics.active_patterns,
             "avg_confidence": metrics.avg_confidence,
             "learning_rate": metrics.learning_rate,
-            "recent_improvements": metrics.recent_improvements
+            "recent_improvements": metrics.recent_improvements,
         }
 
     def display_learning_insights(self):
@@ -296,15 +337,17 @@ Now generate clean, well-documented code that implements this solution:
         if not self.learning_engine:
             console.print("[yellow]Learning system not available[/yellow]")
             return
-        
+
         console.print("\n[bold blue]🧠 AI Learning Insights[/bold blue]")
         self.learning_engine.display_learning_status()
-        
+
         # Show recent learning activity
         metrics = self.learning_engine.get_learning_metrics()
         if metrics.recent_improvements > 0:
-            console.print(f"\n[green]📈 Recent Activity:[/green] {metrics.recent_improvements} new patterns learned this week")
-        
+            console.print(
+                f"\n[green]📈 Recent Activity:[/green] {metrics.recent_improvements} new patterns learned this week"
+            )
+
         # Learning recommendations
         console.print(f"\n[bold yellow]💡 Recommendations:[/bold yellow]")
         if metrics.avg_confidence < 0.7:
@@ -313,5 +356,85 @@ Now generate clean, well-documented code that implements this solution:
             console.print("• Try more diverse coding tasks to expand learning")
         if metrics.active_patterns < 10:
             console.print("• Generate more code to build up the learning database")
-        
-        console.print("\n[dim]The AI learns from every successful fix and improves over time![/dim]")
+
+        console.print(
+            "\n[dim]The AI learns from every successful fix and improves over time![/dim]"
+        )
+
+    def _generate_mock_response(self, prompt: str) -> str:
+        """Generate mock responses for demo purposes"""
+
+        prompt_lower = prompt.lower()
+
+        # Mock analysis responses
+        if "analyze" in prompt_lower and "task" in prompt_lower:
+            return """
+Analysis of the coding task:
+
+1. Core requirements: Create a simple calculator function for addition
+2. Technical domain: Basic Python programming, arithmetic operations
+3. Key challenges: Input validation, error handling
+4. Required knowledge: Python functions, basic arithmetic
+5. Expected deliverables: A working add() function
+
+This is a straightforward task suitable for beginners.
+            """.strip()
+
+        # Mock decomposition responses
+        elif "break down" in prompt_lower or "subtasks" in prompt_lower:
+            return """
+1. Define function signature with two parameters
+2. Implement addition logic
+3. Add input validation
+4. Add error handling for edge cases
+5. Write documentation and examples
+6. Test the function with various inputs
+            """.strip()
+
+        # Mock strategy responses
+        elif "strategy" in prompt_lower:
+            return """
+Execution Strategy:
+
+1. Overall approach: Create a simple, robust addition function
+2. Technology choices: Pure Python, no external dependencies
+3. Testing approach: Unit tests with edge cases
+4. Risk mitigation: Input validation and type checking
+5. Quality assurance: Clear documentation and examples
+
+Focus on simplicity and reliability.
+            """.strip()
+
+        # Mock code generation
+        elif "generate" in prompt_lower or "implement" in prompt_lower:
+            return '''
+def add_numbers(a, b):
+    """
+    Add two numbers together.
+    
+    Args:
+        a (int or float): First number
+        b (int or float): Second number
+    
+    Returns:
+        int or float: Sum of a and b
+    
+    Raises:
+        TypeError: If inputs are not numbers
+    """
+    if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
+        raise TypeError("Both arguments must be numbers")
+    
+    return a + b
+
+# Example usage
+if __name__ == "__main__":
+    # Test cases
+    print(add_numbers(2, 3))      # Output: 5
+    print(add_numbers(1.5, 2.5))  # Output: 4.0
+    print(add_numbers(-1, 1))     # Output: 0
+            '''.strip()
+
+        # Default mock response
+        else:
+            return "Mock AI response: This is a demonstration of the autonomous system. In real usage, this would be generated by GPT-4 or Gemini."

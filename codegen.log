@@ -1,0 +1,7 @@
+2025-07-13 09:13:57,862 - core.ai - WARNING - OPENAI_API_KEY not found in environment variables.
+2025-07-13 09:13:57,863 - core.ai - WARNING - GOOGLE_API_KEY not found in environment variables.
+2025-07-13 09:13:57,904 - codegen.actions - INFO - Started task: Execute autonomous task: Create a simple calculator function that adds two numbers
+2025-07-13 09:13:57,905 - codegen.tasks - INFO - Added task 1: Create a simple calculator function that adds two numbers
+2025-07-13 09:13:57,906 - codegen.actions - INFO - Started plan: Create execution plan
+2025-07-13 09:13:57,911 - codegen.actions - INFO - Started plan: Planning phase: analysis
+2025-07-13 09:13:57,912 - codegen.actions - INFO - Completed plan: completed (1ms)

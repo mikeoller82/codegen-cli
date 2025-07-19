@@ -1,0 +1,51 @@
+{
+  "session_id": "20250713_091357",
+  "stats": {
+    "total_actions": 3,
+    "successful_actions": 1,
+    "failed_actions": 0,
+    "total_duration_ms": 1,
+    "actions_by_type": {
+      "task": 1,
+      "plan": 2
+    },
+    "session_start": "2025-07-13T09:13:57.900365"
+  },
+  "actions": [
+    {
+      "timestamp": "2025-07-13T09:13:57.903624",
+      "action_type": "task",
+      "description": "Execute autonomous task: Create a simple calculator function that adds two numbers",
+      "details": {
+        "auto_continue": true,
+        "max_iterations": 5
+      },
+      "status": "started",
+      "duration_ms": null,
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T09:13:57.905319",
+      "action_type": "plan",
+      "description": "Create execution plan",
+      "details": {
+        "task": "Create a simple calculator function that adds two numbers"
+      },
+      "status": "started",
+      "duration_ms": null,
+      "error": null
+    },
+    {
+      "timestamp": "2025-07-13T09:13:57.909983",
+      "action_type": "plan",
+      "description": "Planning phase: analysis",
+      "details": {
+        "phase": "analysis",
+        "result": "Starting task analysis"
+      },
+      "status": "completed",
+      "duration_ms": 1,
+      "error": null
+    }
+  ]
+}

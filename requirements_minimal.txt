@@ -1,0 +1,5 @@
+# Minimal requirements for agentic coder
+openai>=1.0.0  # Optional - only if using OpenAI
+google-generativeai>=0.3.0  # Optional - only if using Gemini
+
+# No other dependencies required - uses only Python stdlib
