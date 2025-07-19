@@ -47,7 +47,7 @@ class CodeGenCompleter(Completer):
             'context', 'vars', 'env', 'config', 'debug', 'verbose',
             'think', 'reason', 'analyze', 'strategies', 'reasoning',
             'generate-auto', 'gen-auto', 'tasks', 'autotest', 'next',
-            'learning', 'patterns', 'insights'  # New learning commands
+            'learning', 'patterns', 'insights', 'think_mode'  # New learning commands
         ]
         self.path_completer = PathCompleter()
         self.word_completer = WordCompleter(self.commands, ignore_case=True)
@@ -74,6 +74,7 @@ class REPLSession:
         self.web_manager = WebManager()
         self.sandbox = CodeSandbox()
         self.memory = MemoryManager()
+        self.reasoning_engine = ReasoningEngine(self.ai_engine)
         self.task_manager = TaskManager()
         self.auto_test_mode = True  # Enable auto-testing by default
         
@@ -86,7 +87,8 @@ class REPLSession:
             'debug': False,
             'auto_save': False,
             'default_model': 'gpt-3.5-turbo',
-            'timeout': 30
+            'timeout': 30,
+            'thinking_on': False
         }
         
         # Command aliases
@@ -184,8 +186,18 @@ class REPLSession:
         
         console.print("\n[dim]Goodbye![/dim]")
     
+    def pre_command_thought(self, command_line: str):
+        """Show thinking process before executing a command"""
+        if self.config['thinking_on']:
+            if command_line.strip().startswith('think_mode'):
+                return
+            problem = f"I am about to execute the command: '{command_line}'. How should I approach this?"
+            self.reasoning_engine.reason_through_problem(problem, strategy='step_by_step', show_thinking=True)
+
     def process_command(self, command_line: str):
         """Process a command line input"""
+        self.pre_command_thought(command_line)
+        
         parts = command_line.split()
         if not parts:
             return
@@ -266,6 +278,8 @@ class REPLSession:
                 self.cmd_patterns(args)
             elif command == 'insights':
                 self.cmd_insights(args)
+            elif command == 'think_mode':
+                self.cmd_think_mode(args)
             else:
                 console.print(f"[red]Unknown command: {command}[/red]")
                 console.print("Type 'help' for available commands")
@@ -322,6 +336,7 @@ class REPLSession:
                 ("learning", "Show AI learning status", "learning"),
                 ("patterns", "Show learned fix patterns", "patterns"),
                 ("insights", "Show learning insights", "insights"),
+                ("think_mode [on|off]", "Toggle thinking before each command", "think_mode on"),
             ]
             
             for cmd, desc, example in commands:
@@ -1047,6 +1062,19 @@ class REPLSession:
             )
         
         console.print(patterns_table)
+
+    def cmd_think_mode(self, args: List[str]):
+        """Toggle thinking mode"""
+        if args and args[0] in ['on', 'enable', 'true']:
+            self.config['thinking_on'] = True
+            console.print("[green]✓[/green] Thinking mode enabled")
+        elif args and args[0] in ['off', 'disable', 'false']:
+            self.config['thinking_on'] = False
+            console.print("[yellow]⚠️[/yellow] Thinking mode disabled")
+        else:
+            self.config['thinking_on'] = not self.config['thinking_on']
+            status = "enabled" if self.config['thinking_on'] else "disabled"
+            console.print(f"Thinking mode is now [bold]{status}[/bold]")
 
     def cmd_insights(self, args: List[str]):
         """Show detailed learning insights and recommendations"""
